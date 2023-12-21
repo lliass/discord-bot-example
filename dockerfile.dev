@@ -1,0 +1,38 @@
+# Setting up a nest container as development environment
+
+# Use the official node image
+FROM node:lts-alpine as nodeBuilderStage
+
+# Install extra useful packages for alpine version
+RUN apk add --no-cache bash nano less sudo curl && \
+    apk add --no-cache git
+
+# Install docker CLI(daemon binded to the host machine using volumes in compose file)
+RUN apk add --update docker openrc && \
+    rc-update add docker boot   
+
+WORKDIR /bot-container
+ 
+COPY package.json package.json
+COPY package-lock.json package-lock.json
+
+RUN npm install
+
+COPY . .
+
+# Grant privileges to alpine native node user
+RUN echo "node ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/node && \
+    chmod 0440 /etc/sudoers.d/node && \
+    chmod 755 /root
+# Change and config node user
+USER node
+ENV EDITOR=nano
+ENV LESS=R
+RUN echo "complete -d cd" >> ~/.bashrc
+RUN echo "PS1='\e[1;30m(\t)[\w]\$ \e[0m'" >> ~/.bashrc; source ~/.bashrc
+
+# Expose some usable ports
+EXPOSE 3000-3010
+
+# Keeps de container running
+CMD tail -f /dev/null
